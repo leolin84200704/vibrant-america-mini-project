@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/graphql-go/graphql"
 	"go.mongodb.org/mongo-driver/bson"
@@ -35,7 +36,7 @@ func mongodb_connect() *mongo.Client {
 	return client
 }
 
-var stateType = graphql.NewObject(graphql.ObjectConfig{
+var state_type = graphql.NewObject(graphql.ObjectConfig{
 	Name: "State",
 	Fields: graphql.Fields{
 		"name": &graphql.Field{
@@ -44,14 +45,21 @@ var stateType = graphql.NewObject(graphql.ObjectConfig{
 	},
 })
 
-var rootQuery = graphql.NewObject(graphql.ObjectConfig{
-	Name: "RootQuery",
+var root_query = graphql.NewObject(graphql.ObjectConfig{
+	Name: "root_query",
 	Fields: graphql.Fields{
 		"states": &graphql.Field{
-			Type: graphql.NewList(stateType),
+			Type: graphql.NewList(state_type),
+			Args: graphql.FieldConfigArgument{
+				"prefix": &graphql.ArgumentConfig{
+					Type: graphql.String,
+				},
+			},
 			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 				client := mongodb_connect()
 				collection = client.Database("states").Collection("state_names")
+
+				prefix, _ := params.Args["prefix"].(string)
 
 				cursor, err := collection.Find(ctx, bson.M{})
 				if err != nil {
@@ -59,27 +67,30 @@ var rootQuery = graphql.NewObject(graphql.ObjectConfig{
 				}
 				defer cursor.Close(ctx)
 
-				var stateNames []State
+				var state_names []State
 				for cursor.Next(ctx) {
 					var state State
 					if err := cursor.Decode(&state); err != nil {
 						return nil, err
 					}
-					stateNames = append(stateNames, state)
+					if strings.HasPrefix(strings.ToLower(state.Name), strings.ToLower(prefix)) {
+						state_names = append(state_names, state)
+					}
 				}
-				return stateNames, nil
+				return state_names, nil
 			},
 		},
 	},
 })
 
 var schema, _ = graphql.NewSchema(graphql.SchemaConfig{
-	Query: rootQuery,
+	Query: root_query,
 })
 
-func executeGraphQL(w http.ResponseWriter, r *http.Request) {
+func execute_query(w http.ResponseWriter, r *http.Request) {
 	var params struct {
-		Query string `json:"query"`
+		Query     string                 `json:"query"`
+		Variables map[string]interface{} `json:"variables"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -89,8 +100,9 @@ func executeGraphQL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := graphql.Do(graphql.Params{
-		Schema:        schema,
-		RequestString: params.Query,
+		Schema:         schema,
+		RequestString:  params.Query,
+		VariableValues: params.Variables,
 	})
 
 	w.Header().Set("Content-Type", "application/json")
@@ -104,7 +116,7 @@ func executeGraphQL(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	router := mux.NewRouter()
-	router.HandleFunc("/graphql", executeGraphQL).Methods("POST")
+	router.HandleFunc("/graphql", execute_query).Methods("POST")
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
