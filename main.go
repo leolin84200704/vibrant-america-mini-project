@@ -11,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
 type State struct {
@@ -105,6 +106,13 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/graphql", executeGraphQL).Methods("POST")
 
+	corsHandler := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"POST"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+	})
+
 	log.Println("Server starting on :8080...")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	log.Fatal(http.ListenAndServe(":8080", corsHandler.Handler(router)))
 }
