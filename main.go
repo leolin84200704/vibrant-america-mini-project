@@ -1,42 +1,67 @@
-// credit - go-graphql hello world example
 package main
 
 import (
-    "encoding/json"
-    "fmt"
-    "log"
+	"context"
+	"log"
+	"fmt"
+	// "os"
 
-    "github.com/graphql-go/graphql"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func main() {
-    // Schema
-    fields := graphql.Fields{
-        "hello": &graphql.Field{
-            Type: graphql.String,
-            Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-                return "world", nil
-            },
-        },
-    }
-    rootQuery := graphql.ObjectConfig{Name: "RootQuery", Fields: fields}
-    schemaConfig := graphql.SchemaConfig{Query: graphql.NewObject(rootQuery)}
-    schema, err := graphql.NewSchema(schemaConfig)
-    if err != nil {
-        log.Fatalf("failed to create new schema, error: %v", err)
-    }
+type State struct {
+	Name string `json:"name"`
+}
 
-    // Query
-    query := `
-        {
-            hello
-        }
-    `
-    params := graphql.Params{Schema: schema, RequestString: query}
-    r := graphql.Do(params)
-    if len(r.Errors) > 0 {
-        log.Fatalf("failed to execute graphql operation, errors: %+v", r.Errors)
-    }
-    rJSON, _ := json.Marshal(r)
-    fmt.Printf("%s \n", rJSON) // {“data”:{“hello”:”world”}}
+var collection *mongo.Collection
+var ctx = context.TODO()
+
+func mongodb_connect() *mongo.Client{
+	clientOptions := options.Client().ApplyURI("mongodb://admin:admin@localhost:27017")
+	client, err := mongo.Connect(ctx, clientOptions)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = client.Ping(ctx, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return client
+}
+
+func get_state_names(client *mongo.Client) []State{
+	collection = client.Database("states").Collection("state_names")
+	cursor, err := collection.Find(ctx, bson.M{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var state_names []State
+	for cursor.Next(ctx) {
+		var state State
+		err := cursor.Decode(&state)
+		if err != nil {
+			log.Fatal(err)
+		}
+		state_names = append(state_names, state)
+	}
+	if err:= cursor.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return state_names
+}
+
+
+func main() {
+	fmt.Printf("hi")
+	client := mongodb_connect()
+	// fmt.Printf("State: %s\n", client)
+	state_names := get_state_names(client)
+	for _, state := range state_names {
+		fmt.Printf("State: %s\n", state.Name)
+	}
 }
