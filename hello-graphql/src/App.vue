@@ -18,7 +18,10 @@ watchEffect(() => {
 </script>
 
 <template>
-
+<h1>States</h1>
+<ul>
+  <li v-for="state in states" :key="state.name"> {{state.name}} </li>
+</ul>
 </template>
 
 <style scoped>
