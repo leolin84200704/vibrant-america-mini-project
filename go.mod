@@ -5,6 +5,7 @@ go 1.23.3
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
+	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/graphql-go/graphql v0.8.1 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
