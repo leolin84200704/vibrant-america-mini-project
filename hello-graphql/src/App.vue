@@ -1,45 +1,34 @@
 <script setup>
 import { useQuery } from '@vue/apollo-composable'
 import gql from 'graphql-tag';
-import { watchEffect, computed, ref } from 'vue';
+import { watch, ref } from 'vue';
 
-const ALL_STATES_QUERY = gql`
-  query {
-    states { name }
+const GET_STATES_QUERY = gql`
+  query($prefix: String) {
+    states(prefix: $prefix) {
+      name
+    }
   }
-`;
-
-const { result, loading, error } = useQuery(ALL_STATES_QUERY, { url: 'http://localhost:8080/graphql' });
-const states = computed(() => result.value?.states ?? []);
+`
 
 const search_query = ref("");
-const filtered_states = computed(() => {
-  const query = search_query.value.toLowerCase();
-  return query
-    ? states.value.filter(state => state.name.toLowerCase().startsWith(query))
-    : [];
-});
+const query_condition = ref({ prefix: search_query.value })
 
-watchEffect(() => {
-  console.log(filtered_states.value);
-});
+watch(search_query, (new_query) => {
+  query_condition.value.prefix = new_query
+})
+
+const { result, loading, error } = useQuery(GET_STATES_QUERY, query_condition)
 </script>
 
 <template>
   <input
-    type="text"
-    v-model="search_query"
-  />
-  <ul v-if="filtered_states.length">
-    <li
-      v-for="(state, index) in filtered_states"
-      :key="index"
-      @click="() => search_query = state.name"
-      class="suggestion-item"
-    >
-      {{ state.name }}
-    </li>
-  </ul>
+      type="text"
+      v-model="search_query"
+    />
+  <ul v-if="result">
+      <li v-for="(state, index) in result.states" :key="index">{{ state.name }}</li>
+    </ul>
 </template>
 
 <style scoped>
