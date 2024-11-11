@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Maps Test</title>
+    <style>
+        #map {
+            height: 500px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Google Maps Test</h1>
+    <div id="map"></div>
+
+    <script>
+        function initMap() {
+            const mapOptions = {
+                center: { lat: 37.7749, lng: -122.4194 },
+                zoom: 10
+            };
+
+            const map = new google.maps.Map(document.getElementById('map'), mapOptions);
+
+            const marker = new google.maps.Marker({
+                position: { lat: 37.7749, lng: -122.4194 },
+                map: map,
+                title: 'San Francisco'
+            });
+        }
+    </script>
+
+    <script
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCCoIAd3JbTWoQCdnER5Hg2BI3lASgZRGc&callback=initMap"
+        async
+        defer
+    ></script>
+</body>
+</html>
